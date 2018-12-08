@@ -102,3 +102,17 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# PyCharm
+.idea/
+
+# Data Grabber files and folders
+config.txt
+gear images/
+jsons/
+shared images/
+splatfest images/
+splatfest stats/
+*.jpg
+*.png
+*.json

@@ -1,0 +1,11 @@
+{
+    "users": {
+        "1234567890123456": {
+            "nickname": "sample",
+            "names": [
+                "sample",
+                "name"
+            ]
+        }
+    }
+}
