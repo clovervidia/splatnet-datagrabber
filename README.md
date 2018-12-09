@@ -22,6 +22,19 @@ There is a sample config file in this repo called `config.txt.sample`. It's a JS
 If you use splatnet2statink, you can copy or symlink your `config.txt` for that into this project's folder and it will 
 work just fine.
 
+You can order gear from the SplatNet Gear Shop with the script, but you will have to find your "unique ID" in order to 
+do so. You can find this ID in one of two ways: Either record requests from the app using a proxy and look at the 
+`x-unique-id` header, or use your `iksm_session` cookie in a browser to log in to SplatNet, and then look at the source 
+of the page. It will be in the opening HTML tag:
+
+```html
+<html lang="en" data-region="US" data-unique-id="UNIQUE ID HERE" data-nsa-id="PRINCIPAL ID HERE">
+...
+</html>
+```
+
+`data-unique-id` will contain your unique ID, while `data-nsa-id` will contain your principal ID. More on those later.
+
 There are 2 versions of the script: `datagrabber.py` and `datagrabbercolor.py`. They are functionally identical, but the
 `color` version takes advantage of ANSI escape commands in certain terminals to show text in specific colors, like the 
 ink colors for Splatfest teams. The regular `datagrabber.py` also uses colors, but they are more basic to work on 
