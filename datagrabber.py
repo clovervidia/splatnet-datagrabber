@@ -778,7 +778,11 @@ def download_league_everything(start_code=None, end_code=None):
         return
 
     if start_code == "0":
-        start_code = max(glob.glob(os.path.join(JSON_FOLDER, LEAGUE_RANKINGS_FOLDER, "*")), key=os.path.getctime)[63:71]
+        try:
+            start_code = max(glob.glob(os.path.join(JSON_FOLDER, LEAGUE_RANKINGS_FOLDER, "*")),
+                             key=os.path.getctime)[63:71]
+        except ValueError:
+            start_code = "17072108"
         start_code = datetime.datetime(int("20" + start_code[0:2]), int(start_code[2:4]), int(start_code[4:6]),
                                        int(start_code[6:8]), 00) + datetime.timedelta(hours=2)
         start_code = time.strftime("%y%m%d%H", time.strptime(str(start_code), "%Y-%m-%d %H:%M:%S"))

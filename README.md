@@ -121,7 +121,9 @@ take a look at the `direct_access` function in the script.
 `league everything 0 0` checks your `league rankinkgs` folder to find the last set of league JSONs that were downloaded,
 then determines the next rotation that occurred after that, as well as the most recent rotation, and downloads those 
 JSONs from SplatNet. These league JSONs don't contain the player's nicknames, but does contain their weapons and league 
-power, so you could gather some data and and look at trends in weapon usages over time.
+power, so you could gather some data and and look at trends in weapon usages over time.  
+If you don't have any league rankings downloaded yet, the script will automatically start at the first league record 
+from July 2017 and work its way up to the latest. This may take a while.
 
 `update nicknames` checks your `ids.json` file and updates the nicknames. You can set a "friendly name" in the 
 `nickname` field, and any names from SplatNet are added to the `names` array.
