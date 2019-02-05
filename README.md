@@ -114,9 +114,27 @@ win/loss over the last 50 games, and your records JSON, after which it will retu
 
 ### Direct Access
 
-The more interesting commands are accessed by typing in their names and arguments, somewhat like a terminal. I don't 
-have good help docs for them at the moment, so I'll share a few of the commands I use regularly. For more information, 
-take a look at the `direct_access` function in the script.
+The more interesting commands are accessed by typing in their names and arguments, somewhat like a terminal. 
+For more information, take a look at the `direct_access` function in the script, or enter `?` at the prompt to view the 
+help documentation for each command. For example, here is what the documentation looks like:
+
+```
+Help Legend
+Function:       What the command does
+Options:        How to activate the command
+                Most commands will prompt you for additional information unless 'directly' is in the description
+Print:          What gets printed to the terminal
+Write:          What files get written
+
+...
+
+Function:       Get X Rankings for a specific season
+Options:        "x rank", "rank x", "x"
+Print:          X Rankings for specified season
+Write:          X Rankings for specified season, and final rankings if season is complete
+```
+
+Here are a few of the commands I use regularly.
 
 `league everything 0 0` checks your `league rankinkgs` folder to find the last set of league JSONs that were downloaded,
 then determines the next rotation that occurred after that, as well as the most recent rotation, and downloads those 
@@ -155,5 +173,4 @@ number of rotations, like `next 2` will show you information for the rotation af
 downloads your records JSON, which includes interesting things like your total wins and losses on each stage and with 
 each weapon, and your powers/clout and max rank from past Splatfests.
 
-There are many more commands available in `direct_access`, and I'm hoping to have some proper documentation prepared 
-soon to explain what everything does in detail. Take a look and let me know what you think.
+There are many more commands available in `direct_access`. Take a look and let me know what you think.

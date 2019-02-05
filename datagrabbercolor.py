@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from directaccesshelp import help_reader
 
 import requests
 from colorama import init, Fore, Style
@@ -24,6 +25,7 @@ init(autoreset=True)
 try:
     with open("config.txt", "r", encoding="utf8") as config_file:
         config_data = json.load(config_file)
+        COOKIE = config_data["cookie"]
 except IOError:
     print("config.txt not found. Please check file.")
     exit(1)
@@ -31,7 +33,6 @@ except ValueError:
     print("Cookie not found in config.txt. Please check file.")
     exit(1)
 
-COOKIE = config_data["cookie"]
 TIMEZONE_OFFSET = "0"  # Offset is used to print the time on shared images. It's your offset from UTC in minutes.
 # For example, EST (-4) is 240 and PST (-8) is 480
 
@@ -132,13 +133,13 @@ app_head_shop = {
 # Splatfest IDs
 FESTIVALS_NA = {"1": "2050", "2": "5051", "3": "2051", "4": "2052", "5": "2053", "6": "4051", "7": "2054", "8": "5052",
                 "9": "2055", "10": "5053", "11": "5054", "12": "5056", "13": "5059", "14": "4052", "15": "2056",
-                "16": "5060", "17": "4053", "18": "2057", "19": "4054", "20": "4055"}
+                "16": "5060", "17": "4053", "18": "2057", "19": "4054", "20": "4055", "21": "5061"}
 FESTIVALS_JP = {"1": "1051", "2": "1052", "3": "1054", "4": "1055", "5": "1056", "6": "4051", "7": "1057", "8": "1058",
                 "9": "1059", "10": "1060", "11": "1061", "12": "1062", "13": "1063", "14": "4052", "15": "1065",
-                "16": "1066", "17": "4053", "18": "1067", "19": "4054", "20": "4055"}
+                "16": "1066", "17": "4053", "18": "1067", "19": "4054", "20": "4055", "21": "1068"}
 FESTIVALS_EU = {"1": "3050", "2": "5051", "3": "3051", "4": "3052", "5": "3053", "6": "4051", "7": "3054", "8": "5052",
                 "9": "3055", "10": "5053", "11": "5054", "12": "5056", "13": "5059", "14": "4052", "15": "3056",
-                "16": "5060", "17": "4053", "18": "3057", "19": "4054", "20": "4055", }
+                "16": "5060", "17": "4053", "18": "3057", "19": "4054", "20": "4055", "21": "5061"}
 
 # Splatfest region
 FESTIVALS = FESTIVALS_NA
@@ -415,7 +416,10 @@ def direct_access(option=None):
     if option is None:
         option = input("Type in what you want to retrieve: ")
 
-    if option in ["coop schedules", "coop", "salmon run", "salmon", "s"]:
+    if option in ["help", "h", "?"]:
+        help_reader()
+
+    elif option in ["coop schedules", "coop", "salmon run", "salmon", "s"]:
         print("\nRetrieving Salmon Run Schedule.")
         url = URL_API_COOP_SCHEDULES
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
