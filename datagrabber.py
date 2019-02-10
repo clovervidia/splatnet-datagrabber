@@ -27,10 +27,10 @@ try:
         COOKIE = config_data["cookie"]
 except IOError:
     print("config.txt not found. Please check file.")
-    exit(1)
+    sys.exit(1)
 except ValueError:
     print("Cookie not found in config.txt. Please check file.")
-    exit(1)
+    sys.exit(1)
 
 TIMEZONE_OFFSET = "0"  # Offset is used to print the time on shared images. It's your offset from UTC in minutes.
 # For example, EST (-4) is 240 and PST (-8) is 480
@@ -174,7 +174,7 @@ def menu():
         elif option == "6":
             get_all_battle_results()
         elif option == "0":
-            exit(0)
+            sys.exit(0)
         elif option.lower() in ["c", "cookie"]:
             print(COOKIE)
             if os.name == "nt":
@@ -184,7 +184,7 @@ def menu():
         elif option.lower() == "f":
             script_path = os.path.dirname(os.path.realpath(__file__))
             if os.name == "nt":
-                subprocess.Popen("explorer " + script_path)
+                subprocess.Popen("explorer {}".format(script_path))
         elif option.lower() == "fc":
             print(FRIEND_CODE)
             if os.name == "nt":
@@ -252,6 +252,7 @@ def get_challenge():
 def get_battle_results(latest=False, battle_no=None, auto=False):
     results = get_results(True)
 
+    battle_date = None
     if latest:
         battle_no = results[0]["battle_number"]
         print("Your latest battle was #{}".format(battle_no))
@@ -282,15 +283,15 @@ def get_battle_results(latest=False, battle_no=None, auto=False):
 
     url = URL_API_BATTLE_RESULTS.format(battle_no)
     battle = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
-    battledata = json.loads(battle.text)
-    print("{:<5} {:<23} {:<18} {:<15} {}{:<15}".format(battle_no, battledata["stage"]["name"],
-                                                       battledata["game_mode"]["name"], battledata["rule"]["name"],
-                                                       Fore.GREEN if battledata["my_team_result"][
+    battle_data = json.loads(battle.text)
+    print("{:<5} {:<23} {:<18} {:<15} {}{:<15}".format(battle_no, battle_data["stage"]["name"],
+                                                       battle_data["game_mode"]["name"], battle_data["rule"]["name"],
+                                                       Fore.GREEN if battle_data["my_team_result"][
                                                                          "name"] == "VICTORY" else Fore.RED,
-                                                       battledata["my_team_result"]["name"]))
+                                                       battle_data["my_team_result"]["name"]))
     with open(os.path.join(JSON_FOLDER, os.path.join(BATTLES_FOLDER, "{} {}.json".format(battle_date, battle_no))), "w",
               encoding="utf8") as file:
-        json.dump(battledata, file, ensure_ascii=False)
+        json.dump(battle_data, file, ensure_ascii=False)
 
 
 def get_battle_results_monitor():
@@ -316,14 +317,14 @@ def get_battle_results_monitor():
                 get_records()
 
                 if results[0]["my_team_result"]["key"] == "victory":
-                    wins = wins + 1
+                    wins += 1
                     if results[0]["game_mode"]["key"] in ["fes_solo", "fes_team"]:
                         if results[0]["my_team_fes_theme"]["key"] == results[0]["other_team_fes_theme"]["key"]:
                             mirror_matches += 1
                         else:
                             splatfest_wins += 1
                 else:
-                    losses = losses + 1
+                    losses += 1
                     if results[0]["game_mode"]["key"] in ["fes_solo", "fes_team"]:
                         if results[0]["my_team_fes_theme"]["key"] == results[0]["other_team_fes_theme"]["key"]:
                             mirror_matches += 1
@@ -334,13 +335,13 @@ def get_battle_results_monitor():
                     if results[0]["fes_power"] != 0:
                         print("{:+4.1f}".format(results[0]["fes_power"] - splatfest_power))
                         splatfest_power = results[0]["fes_power"]
-                except:
-                    pass
+                except Exception as e:
+                    print("Encountered exception when parsing Splatfest power:\n{}\n".format(e))
             else:
                 pass
             countdown(90)
-    except:
-        print("\nDownloading win/loss and profile before exiting.")
+    except KeyboardInterrupt:
+        print("\nDownloading win/loss and profile before stopping.")
         results = get_results(True)
         get_win_loss(True)
         get_profile(True)
@@ -361,6 +362,8 @@ def get_battle_results_monitor():
                                                                                     "" if splatfest_losses == 1 else "es"))
             print("{} mirror match{} against your Splatfest team.".format(mirror_matches,
                                                                           "" if mirror_matches == 1 else "es"))
+    except Exception as e:
+        print("Encountered exception when downloading results from SplatNet:\n{}\nStopping.".format(e))
 
 
 def get_all_battle_results():
@@ -379,7 +382,7 @@ def get_results(download=False):
         results = data["results"]
     except KeyError:
         print("Bad cookie. Please check config.txt.")
-        exit(1)
+        sys.exit(1)
 
     if download:
         with open(os.path.join(JSON_FOLDER, "{} results.json").format(
@@ -398,7 +401,7 @@ def get_image(url, payload=None):
         image_url = data["url"]
     except KeyError:
         print("Bad cookie. Please check config.txt.")
-        exit(1)
+        sys.exit(1)
 
     return image_url
 
@@ -557,7 +560,7 @@ def direct_access(option=None):
     elif option.lower() == "f":
         script_path = os.path.dirname(os.path.realpath(__file__))
         if os.name == "nt":
-            subprocess.Popen("explorer " + script_path)
+            subprocess.Popen("explorer {}".format(script_path))
     elif option in ["profile", "ranks"]:
         url = URL_API_RECORDS
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
@@ -613,6 +616,7 @@ def festival_access(option=None):
         elif len(festival_id) != 4 or festival_id == "" or len(re.findall("[\D]", festival_id)) > 0:
             print("Invalid Splatfest ID. Please check it and try again.")
             return
+        print("\nRetrieving Splatfest rankings.")
         url = URL_API_FEST_RANKINGS.format(festival_id)
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
         with open("{} {} {} {}.json".format(time.strftime("%Y-%m-%d %H-%M-%S"), url.split("/")[-3], url.split("/")[-2],
@@ -625,6 +629,7 @@ def festival_access(option=None):
         elif len(str(festival_id)) != 4 or str(festival_id) == "" or len(re.findall("[\D]", str(festival_id))) > 0:
             print("Invalid Splatfest ID. Please check it and try again.")
             return
+        print("\nRetrieving Splatfest rankings.")
         url = URL_API_FEST_RANKINGS.format(festival_id)
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
         with open("{} {} {} {}.json".format(time.strftime("%Y-%m-%d %H-%M-%S"), url.split("/")[-3], url.split("/")[-2],
@@ -641,8 +646,8 @@ def festival_access(option=None):
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
         try:
             parse_splatfest_rankings(json.loads(response.text))
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest rankings:\n{}\n".format(e))
     elif option in ["splatfest power stats", "splatfest stats"]:
         print("Calculating Splatfest Power statistics.\r", end="")
         parse_splatfest_rankings_stats()
@@ -652,6 +657,7 @@ def festival_access(option=None):
         festival_id = int(re.search("\d+", option).group(0))
         parse_splatfest_results(festival_id)
     elif option in ["all festivals", "all fest", "all splatfest"]:
+        print("\nRetrieving Splatfest data.")
         url = URL_API_SPLATOON2_INK_FEST_DATA
         response = requests.get(url)
         with open("{} {} {} {}".format(time.strftime("%Y-%m-%d %H-%M-%S"), url.split("/")[-3], url.split("/")[-2],
@@ -664,33 +670,33 @@ def festival_access(option=None):
         response_active = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
         try:
             parse_splatfest_colors(json.loads(response_active.text))
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest colors:\n{}\n".format(e))
         try:
             parse_splatfest_colors(json.loads(response.text))
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest colors:\n{}\n".format(e))
     elif option in ["na colors", "us colors"]:
         url = URL_API_SPLATOON2_INK_FEST_DATA
         response = requests.get(url)
         try:
             parse_splatfest_colors(json.loads(response.text)["na"])
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest colors:\n{}\n".format(e))
     elif option in ["eu colors"]:
         url = URL_API_SPLATOON2_INK_FEST_DATA
         response = requests.get(url)
         try:
             parse_splatfest_colors(json.loads(response.text)["eu"])
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest colors:\n{}\n".format(e))
     elif option in ["jp colors"]:
         url = URL_API_SPLATOON2_INK_FEST_DATA
         response = requests.get(url)
         try:
             parse_splatfest_colors(json.loads(response.text)["jp"])
-        except:
-            pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest colors:\n{}\n".format(e))
     elif option in ["team images", "images", "splatfest images", "fest images"]:
         download_all_splatfest_images()
     elif option in ["events", "event battles"]:
@@ -705,6 +711,7 @@ def festival_access(option=None):
 
 def league_board_access():
     league_code = input("Enter the date and time code to download: ")
+    team_type = None
 
     if len(league_code) > 9:
         print("Invalid code. Check the URL and try again.")
@@ -751,16 +758,15 @@ def league_board_access_all(league_code=None):
 
 def download_league(league_code, team_type, region):
     league_code = league_code + team_type.upper()
-    league_code = league_code + "/" + region.upper()
+    league_code = "{}/{}".format(league_code, region.upper())
     url = URL_API_LEAGUE_MATCH_RANKINGS.format(league_code)
 
     league_raw_data = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
     league_data = json.loads(league_raw_data.text)
 
-    try:
-        league_data["league_id"]
+    if "league_id" in league_data:
         league_date = datetime.datetime.fromtimestamp(int(league_data["start_time"])).strftime("%Y-%m-%d %H-%M-%S")
-    except:
+    else:
         print("Something went wrong ({} had no {} squads in League).".format(
             {"all": "all countries", "eu": "Europe", "jp": "Japan", "us": "North America"}.get(region, "some region"),
             {"t": "team", "p": "pair"}.get(team_type)))
@@ -777,7 +783,7 @@ def download_league(league_code, team_type, region):
 
 def download_league_everything(start_code=None, end_code=None):
     if start_code is None or end_code is None:
-        print("Usage: league everything <start code> <end code>.")
+        print("\nUsage: league everything <start code> <end code>.")
         print("Use 0 for both to automatically set start and end codes.")
         return
 
@@ -814,16 +820,16 @@ def download_league_everything(start_code=None, end_code=None):
         new_results = datetime.datetime(int("20" + end_code[0:2]), int(end_code[2:4]), int(end_code[4:6]),
                                         int(end_code[6:8]), 15) + datetime.timedelta(
             hours=2) - datetime.datetime.utcnow()
-        print("No new league records to retrieve. Next results will be available in {}.".format(
+        print("\nNo new league records to retrieve. Next results will be available in {}.".format(
             str(new_results).split(".")[0]))
         return
 
     if end_code < start_code:
-        print("Something went horribly, horribly wrong.")
+        print("\nSomething went horribly, horribly wrong.")
         print("{} {}".format(end_code, start_code))
         return
 
-    print("Starting at {} and stopping at {}.".format(start_code, end_code))
+    print("\nStarting at {} and stopping at {}.".format(start_code, end_code))
 
     i = 0
     while True:  # (2017,7,21,4,00) or 2017-07-21 4:00 AM were the first recorded league rankings
@@ -850,10 +856,13 @@ def download_league_everything(start_code=None, end_code=None):
             download_league(league_code, "p", "us")
             time.sleep(random.randint(3, 8))
             download_league(league_code, "p", "eu")
-        except:
+        except KeyboardInterrupt:
             print("And we're up to date!")
             return
-        i = i + 2
+        except Exception as e:
+            print("Encountered exception when downloading league rankings:\n{}\n".format(e))
+            return
+        i += 2
         try:
             next_rotation = datetime.timedelta(hours=i)
             next_current_rotation = datetime.datetime(int("20" + start_code[0:2]),
@@ -863,8 +872,11 @@ def download_league_everything(start_code=None, end_code=None):
             if next_league_code == end_code:
                 break
             countdown(15)
-        except:
+        except KeyboardInterrupt:
             print("Stopping there.        ")
+            return
+        except Exception as e:
+            print("Encountered exception when downloading league rankings:\n{}\n".format(e))
             return
     print("Stopping there.        ")
     return
@@ -873,12 +885,12 @@ def download_league_everything(start_code=None, end_code=None):
 def parse_salmon_run_schedule(salmon_run):
     for i in range(len(salmon_run["details"])):
         if time.time() > salmon_run["details"][i]["start_time"]:
-            timeleft = datetime.datetime.fromtimestamp(salmon_run["details"][i]["end_time"]) - datetime.datetime.now()
-            print("You have {} left to finish your shift.".format(str(timeleft).split(".")[0]))
+            time_left = datetime.datetime.fromtimestamp(salmon_run["details"][i]["end_time"]) - datetime.datetime.now()
+            print("You have {} left to finish your shift.".format(str(time_left).split(".")[0]))
         else:
-            timetoshift = datetime.datetime.fromtimestamp(
+            time_to_shift = datetime.datetime.fromtimestamp(
                 salmon_run["details"][i]["start_time"]) - datetime.datetime.now()
-            print("Next Salmon Run shift starts in {}. It starts at {}.".format(str(timetoshift).split(".")[0],
+            print("Next Salmon Run shift starts in {}. It starts at {}.".format(str(time_to_shift).split(".")[0],
                                                                                 datetime.datetime.fromtimestamp(
                                                                                     salmon_run["details"][i][
                                                                                         "start_time"])))
@@ -900,17 +912,14 @@ def parse_salmon_run_schedule(salmon_run):
 
 
 def parse_active_splatfests(active):
-    try:
-        if len(active["festivals"][0]["colors"]) > 0:
-            if time.time() < active["festivals"][0]["times"]["start"]:
-                print("There is a Splatfest coming soon!")
-            elif time.time() < active["festivals"][0]["times"]["end"]:
-                print("There is a Splatfest going on!")
-            else:
-                print("The Splatfest is over, but the results are still to come.")
+    if len(active["festivals"][0]["colors"]) > 0:
+        if time.time() < active["festivals"][0]["times"]["start"]:
+            print("There is a Splatfest coming soon!")
+        elif time.time() < active["festivals"][0]["times"]["end"]:
+            print("There is a Splatfest going on!")
         else:
-            return
-    except:
+            print("The Splatfest is over, but the results are still to come.")
+    else:
         print("No Splatfests going on right now.")
         return
 
@@ -918,22 +927,22 @@ def parse_active_splatfests(active):
         print("The coming Splatfest is between {} and {}.".format(
             Fore.GREEN + active["festivals"][0]["names"]["alpha_short"] + Style.RESET_ALL,
             Fore.GREEN + active["festivals"][0]["names"]["bravo_short"] + Style.RESET_ALL))
-        timetostart = datetime.datetime.fromtimestamp(
+        time_to_start = datetime.datetime.fromtimestamp(
             active["festivals"][0]["times"]["start"]) - datetime.datetime.now()
-        print("Splatfest starts in {}.".format(str(timetostart).split(".")[0]))
+        print("Splatfest starts in {}.".format(str(time_to_start).split(".")[0]))
     if active["festivals"][0]["times"]["end"] > time.time() > active["festivals"][0]["times"]["start"]:
         print("The current Splatfest is between {} and {}.".format(
             Fore.GREEN + active["festivals"][0]["names"]["alpha_short"] + Style.RESET_ALL,
             Fore.GREEN + active["festivals"][0]["names"]["bravo_short"] + Style.RESET_ALL))
-        timeleft = datetime.datetime.fromtimestamp(active["festivals"][0]["times"]["end"]) - datetime.datetime.now()
-        print("There's {} left in this Splatfest.".format(str(timeleft).split(".")[0]))
+        time_left = datetime.datetime.fromtimestamp(active["festivals"][0]["times"]["end"]) - datetime.datetime.now()
+        print("There's {} left in this Splatfest.".format(str(time_left).split(".")[0]))
     if time.time() > active["festivals"][0]["times"]["end"]:
-        timetoresults = datetime.datetime.fromtimestamp(
+        time_to_results = datetime.datetime.fromtimestamp(
             active["festivals"][0]["times"]["result"]) - datetime.datetime.now()
         print("Results for {} vs {} will be out in {}.".format(
             Fore.GREEN + active["festivals"][0]["names"]["alpha_short"] + Style.RESET_ALL,
             Fore.GREEN + active["festivals"][0]["names"]["bravo_short"] + Style.RESET_ALL,
-            str(timetoresults).split(".")[0]))
+            str(time_to_results).split(".")[0]))
 
     download_splatfest_images(active)
 
@@ -977,8 +986,10 @@ def parse_splatfest_rankings(rankings, auto=False):
                 rankings["rankings"]["alpha"][i]["score"]) > max_alpha else max_alpha
             min_alpha = int(rankings["rankings"]["alpha"][i]["score"]) if int(
                 rankings["rankings"]["alpha"][i]["score"]) < min_alpha else min_alpha
-        except:
+        except KeyError:
             pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest rankings for team Alpha:\n{}\n".format(e))
     for i in range(len(rankings["rankings"]["bravo"])):
         try:
             total_bravo = total_bravo + int(rankings["rankings"]["bravo"][i]["score"])
@@ -986,8 +997,10 @@ def parse_splatfest_rankings(rankings, auto=False):
                 rankings["rankings"]["bravo"][i]["score"]) > max_bravo else max_bravo
             min_bravo = int(rankings["rankings"]["bravo"][i]["score"]) if int(
                 rankings["rankings"]["bravo"][i]["score"]) < min_bravo else min_bravo
-        except:
+        except KeyError:
             pass
+        except Exception as e:
+            print("Encountered exception when parsing Splatfest rankings for team Bravo:\n{}\n".format(e))
     average_alpha = total_alpha / 100
     average_bravo = total_bravo / 100
 
@@ -1006,7 +1019,7 @@ def parse_splatfest_rankings_stats():
 
     try:
         os.makedirs(splatfest_folder)
-    except:
+    except IOError:
         print("Couldn't make a folder for the stats.")
         return
 
@@ -1016,7 +1029,7 @@ def parse_splatfest_rankings_stats():
     try:
         stats_array.append(["Alpha", "Alpha", "Alpha", "Alpha", "", "Bravo", "Bravo", "Bravo", "Bravo"])
         stats_array.append(["", "Min", "Max", "Average", "", "", "Min", "Max", "Average"])
-    except:
+    except IOError:
         print("Can't access the file. Make sure it's not open in Excel.")
         return
 
@@ -1041,17 +1054,17 @@ def parse_splatfest_rankings_stats():
         for k in festival_pasts["results"]:
             if str(k["festival_id"]) == FESTIVALS[i]:
                 if k["summary"]["total"] == 0:
-                    alpha_name = alpha_name + " (Won)"
+                    alpha_name += " (Won)"
                     break
                 else:
-                    bravo_name = bravo_name + " (Won)"
+                    bravo_name += " (Won)"
                     break
 
         rankings_array = [["Placement", alpha_name, "", "", "", bravo_name, ""]]
         for l in range(len(rankings["rankings"]["alpha"])):
             try:
                 alpha_order = rankings["rankings"]["alpha"][l]["order"]
-            except:
+            except KeyError:
                 alpha_order = ""
             try:
                 alpha_score = rankings["rankings"]["alpha"][l]["score"]
@@ -1062,28 +1075,28 @@ def parse_splatfest_rankings_stats():
             # will contain a tab, which isn't that great. Will have to investigate alternatives.
             # if alpha_nickname[0] in ["+","=","-"]:
             # alpha_nickname = "\t" + alpha_nickname
-            except:
-                alpha_score = ""
-                alpha_nickname = ""
-                alpha_weapon = ""
+            except KeyError:
+                alpha_score = "-"
+                alpha_nickname = "-"
+                alpha_weapon = "-"
             try:
                 bravo_score = rankings["rankings"]["bravo"][l]["score"]
                 bravo_nickname = rankings["rankings"]["bravo"][l]["info"]["nickname"]
                 bravo_weapon = rankings["rankings"]["bravo"][l]["info"]["weapon"]["name"]
             # if bravo_nickname[0] in ["+","=","-"]:
             # bravo_nickname = "\t" + bravo_nickname
-            except:
-                bravo_score = ""
-                bravo_nickname = ""
-                bravo_weapon = ""
+            except KeyError:
+                bravo_score = "-"
+                bravo_nickname = "-"
+                bravo_weapon = "-"
             rankings_array.append(
                 [alpha_order, alpha_score, alpha_nickname, alpha_weapon, "", bravo_score, bravo_nickname, bravo_weapon])
 
         with open(os.path.join(splatfest_folder, "splatfest rankings {} {}.csv".format(i, FESTIVALS[i])), "w",
                   newline="", encoding="utf8") as rankings_file:
             rankings_file.write("\ufeff")
-            for i in rankings_array:
-                csv.writer(rankings_file, quoting=csv.QUOTE_ALL).writerow(i)
+            for ranking in rankings_array:
+                csv.writer(rankings_file, quoting=csv.QUOTE_ALL).writerow(ranking)
 
         stats_array.append([alpha_name, stats["min_alpha"], stats["max_alpha"], stats["average_alpha"], "", bravo_name,
                             stats["min_bravo"], stats["max_bravo"], stats["average_bravo"]])
@@ -1095,8 +1108,8 @@ def parse_splatfest_rankings_stats():
     print("See {} for CSV-formatted data.".format(stats_file_name))
     print("The top 100 rankings for each Splatfest are in '{}'.".format("splatfest # #### rankings.json"))
     if os.name == "nt":
-        subprocess.Popen("explorer /select," + os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                                            stats_file_name))
+        subprocess.Popen("explorer /select,{}".format(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                                            stats_file_name)))
 
 
 def parse_splatfest_results(festival_id=None):
@@ -1195,8 +1208,8 @@ def parse_schedules(schedule, splatfest_active, rotation=0):
                                              schedule["league"][0]["rule"]["name"],
                                              Fore.GREEN + schedule["league"][0]["stage_a"]["name"] + Style.RESET_ALL,
                                              Fore.GREEN + schedule["league"][0]["stage_b"]["name"]))
-        timeleft = datetime.datetime.fromtimestamp(schedule["regular"][0]["end_time"]) - datetime.datetime.now()
-        print("There's {} left in this rotation.".format(str(timeleft).split(".")[0]))
+        time_left = datetime.datetime.fromtimestamp(schedule["regular"][0]["end_time"]) - datetime.datetime.now()
+        print("There's {} left in this rotation.".format(str(time_left).split(".")[0]))
     else:
         print("{:<18}{:<17}{} and {}".format(schedule["regular"][rotation]["game_mode"]["name"],
                                              schedule["regular"][rotation]["rule"]["name"],
@@ -1213,38 +1226,32 @@ def parse_schedules(schedule, splatfest_active, rotation=0):
                                              Fore.GREEN + schedule["league"][rotation]["stage_a"][
                                                  "name"] + Style.RESET_ALL,
                                              Fore.GREEN + schedule["league"][rotation]["stage_b"]["name"]))
-        timetillstart = datetime.datetime.fromtimestamp(
+        time_till_start = datetime.datetime.fromtimestamp(
             schedule["regular"][rotation]["start_time"]) - datetime.datetime.now()
-        print("There's {} until this rotation. It starts at {}.".format(str(timetillstart).split(".")[0],
+        print("There's {} until this rotation. It starts at {}.".format(str(time_till_start).split(".")[0],
                                                                         datetime.datetime.fromtimestamp(
                                                                             schedule["regular"][rotation][
                                                                                 "start_time"]).time()))
 
 
 def parse_gear_images(data):
-    try:
-        data["coop"]["reward_gear"]["gear"]["image"]
+    if "coop" in data:
         download_gear_image(data["coop"]["reward_gear"]["gear"]["image"])
-    except:
-        pass
 
-    try:
-        len(data["merchandises"])
+    if "merchandises" in data:
         for i in range(len(data["merchandises"])):
             download_gear_image(data["merchandises"][i]["gear"])
-    except:
-        pass
 
 
 def download_gear_image(gear_data):
     headgear_folder = os.path.join(GEAR_IMAGES_FOLDER, "headgear")
     clothes_folder = os.path.join(GEAR_IMAGES_FOLDER, "clothes")
     shoes_folder = os.path.join(GEAR_IMAGES_FOLDER, "shoes")
-    filename = "{} - {} - {}".format(gear_data["id"], gear_data["name"], gear_data["image"])
+    filename = "{} - {} - {}".format(gear_data["id"], gear_data["name"], gear_data["image"].split('/')[-1])
 
-    for folder in [headgear_folder, clothes_folder, shoes_folder]:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
+    for gear_folder in [headgear_folder, clothes_folder, shoes_folder]:
+        if not os.path.exists(gear_folder):
+            os.makedirs(gear_folder)
 
     if gear_data["kind"] == "head":
         full_filename = os.path.join(headgear_folder, filename)
@@ -1299,7 +1306,7 @@ def parse_splatfest_votes(festival_id):
     if str(festival_id) in FESTIVALS:
         festival_id = FESTIVALS[str(festival_id)]
     elif len(str(festival_id)) != 4 or str(festival_id) == "" or len(re.findall("[\D]", str(festival_id))) > 0:
-        print("Invalid Splatfest ID. Please check it and try again.")
+        print("\nInvalid Splatfest ID. Please check it and try again.")
         return
 
     url = URL_API_FEST_VOTES.format(festival_id)
@@ -1308,10 +1315,13 @@ def parse_splatfest_votes(festival_id):
                                         url.split("/")[-1]), "w", encoding="utf8") as file:
         votes = json.loads(response.text)
         json.dump(votes, file, ensure_ascii=False)
-    print("\n{} vote{} for Alpha and {} vote{} for Bravo.".format(len(votes["votes"]["alpha"]),
-                                                                  "" if len(votes["votes"]["alpha"]) == 1 else "s",
-                                                                  len(votes["votes"]["bravo"]),
-                                                                  "" if len(votes["votes"]["bravo"]) == 1 else "s"))
+    if "votes" in votes:
+        print("\n{} vote{} for Alpha and {} vote{} for Bravo.".format(len(votes["votes"]["alpha"]),
+                                                                      "" if len(votes["votes"]["alpha"]) == 1 else "s",
+                                                                      len(votes["votes"]["bravo"]),
+                                                                      "" if len(votes["votes"]["bravo"]) == 1 else "s"))
+    else:
+        print("\nDid not receive votes from SplatNet. Got this instead:\n{}\n".format(votes))
 
 
 def parse_splatnet_shop(items):
@@ -1345,8 +1355,8 @@ def parse_splatnet_shop(items):
         try:
             print("{} with {}".format(items["merchandises"][int(item_number) - 1]["gear"]["name"],
                                       items["merchandises"][int(item_number) - 1]["skill"]["name"]))
-        except:
-            print("Something bad happened.")
+        except Exception as e:
+            print("Encountered exception when parsing SplatNet Shop data:\n{}\n".format(e))
             return
         confirm_order = input("Is that right? (Y/n) ")
         if len(confirm_order) == 0 or confirm_order[0].lower() != "n":
@@ -1357,21 +1367,21 @@ def parse_splatnet_shop(items):
         else:
             print("Canceled the order.")
             return
-        try:
-            if json.loads(response.text)["code"] == "ONLINE_SHOP_ALREADY_ORDERED":
-                print("You already have the following item ordered:")
-                print(
-                    "{} with {}".format(items["ordered_info"]["gear"]["name"], items["ordered_info"]["skill"]["name"]))
-                confirm_override = input("Would you like to order anyway and replace that? (y/N) ")
-                if len(confirm_override) == 0 or confirm_override[0].lower() != "y":
-                    print("Canceled the order.")
-                    return
-                else:
-                    print("Ordering with override.")
-                    url = URL_API_ONLINESHOP_ORDER.format(item["id"])
-                    payload = {"override": 1}
-                    requests.post(url, headers=app_head_shop, cookies=dict(iksm_session=COOKIE), data=payload)
-        except:
+
+        if json.loads(response.text)["code"] == "ONLINE_SHOP_ALREADY_ORDERED":
+            print("You already have the following item ordered:")
+            print(
+                "{} with {}".format(items["ordered_info"]["gear"]["name"], items["ordered_info"]["skill"]["name"]))
+            confirm_override = input("Would you like to order anyway and replace that? (y/N) ")
+            if len(confirm_override) == 0 or confirm_override[0].lower() != "y":
+                print("Canceled the order.")
+                return
+            else:
+                print("Ordering with override.")
+                url = URL_API_ONLINESHOP_ORDER.format(item["id"])
+                payload = {"override": 1}
+                requests.post(url, headers=app_head_shop, cookies=dict(iksm_session=COOKIE), data=payload)
+        else:
             print("Order placed successfully.")
     else:
         print("That's not an option.")
@@ -1393,8 +1403,8 @@ def parse_timeline(timeline):
                                                               i["weapon"]["image"].split("/")[-1]))
                 image_url = URL_API_BASE.format(i["weapon"]["image"])
                 urllib.request.urlretrieve(image_url, filename)
-    except:
-        pass
+    except Exception as e:
+        print("Encountered exception when parsing timeline:\n{}\n".format(e))
     try:
         if timeline["udemae"]["importance"] > -1:
             print("\nCongratulations on your new rank in {}!".format(
@@ -1406,25 +1416,25 @@ def parse_timeline(timeline):
                 timeline["udemae"]["stat"]["udemae"]["name"],
                 timeline["udemae"]["stat"]["udemae"]["s_plus_number"] if timeline["udemae"]["stat"]["udemae"][
                                                                              "s_plus_number"] is not None else ""))
-    except:
-        pass
+    except Exception as e:
+        print("Encountered exception when parsing timeline:\n{}\n".format(e))
 
 
 def nicknames_and_icons():
-    principalid = input("\nWhat's the principal ID? ")
-    principalids = principalid.split(" ")
+    principal_id = input("\nWhat's the principal ID? ")
+    principal_ids = principal_id.split(" ")
 
-    for i in principalids:
+    for i in principal_ids:
         if len(i) != 16:
             print("Invalid principal ID.")
             return
 
     url = URL_API_NICKNAME_ICON
     response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE),
-                            params={"id": principalids})
+                            params={"id": principal_ids})
     nickname_and_icons = json.loads(response.text)
     for i in nickname_and_icons["nickname_and_icons"]:
-        if len(principalids) > 1:
+        if len(principal_ids) > 1:
             print("{} belongs to {}.".format(i["nsa_id"], i["nickname"]))
         else:
             print("That ID belongs to {}.".format(i["nickname"]))
@@ -1433,23 +1443,23 @@ def nicknames_and_icons():
 
 def update_nicknames():
     for names in ["ids.json"]:
-        with open(names, "r+", encoding="utf8") as idfile:
-            iddata = json.load(idfile)["users"]
+        with open(names, "r+", encoding="utf8") as id_file:
+            id_data = json.load(id_file)["users"]
 
-        principalids = list(iddata)
+        principal_ids = list(id_data)
 
         url = URL_API_NICKNAME_ICON
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE),
-                                params={"id": principalids})
+                                params={"id": principal_ids})
         nickname_and_icons = json.loads(response.text)
 
         for i in nickname_and_icons["nickname_and_icons"]:
-            if i["nickname"] not in iddata[i["nsa_id"]]["names"]:
-                print("Found a new name for {}. ({})".format(iddata[i["nsa_id"]]["nickname"], i["nickname"]))
-                iddata[i["nsa_id"]]["names"].append(i["nickname"])
+            if i["nickname"] not in id_data[i["nsa_id"]]["names"]:
+                print("Found a new name for {}. ({})".format(id_data[i["nsa_id"]]["nickname"], i["nickname"]))
+                id_data[i["nsa_id"]]["names"].append(i["nickname"])
 
-        with open(names, "r+", encoding="utf8") as idfile:
-            json.dump({"users": iddata}, idfile, indent=4, ensure_ascii=False)
+        with open(names, "r+", encoding="utf8") as id_file:
+            json.dump({"users": id_data}, id_file, indent=4, ensure_ascii=False)
 
 
 def parse_records_stages(records, stage=None):
@@ -1472,7 +1482,7 @@ def parse_records_stages(records, stage=None):
     if stage is not None:
         try:
             print_record_stage(stage_records[stage])
-        except:
+        except KeyError:
             print("You haven't played on that stage, or it doesn't exist.")
     else:
         for idx, i in enumerate(sorted(stage_records, key=int)):
@@ -1625,7 +1635,7 @@ def parse_records_weapons(records, weapon=None):
     else:
         try:
             print_record_weapon(records["weapon_stats"][weapon])
-        except:
+        except KeyError:
             print("You haven't played with that weapon, or it doesn't exist.")
 
 
@@ -1665,13 +1675,13 @@ def download_x_rankings(season=None):
     rankings_folder = os.path.join(base_directory, "{} {}".format(mode_time, url.split("/")[-2]))
     try:
         os.makedirs(rankings_folder)
-    except:
+    except IOError:
         print("Couldn't make a folder for the stats.")
         return
 
     try:
         datetime.datetime.fromtimestamp(int(season_data["rainmaker"]["start_time"])).strftime("%Y-%m-%d %H-%M-%S")
-    except:
+    except ValueError:
         print("Something bad happened.")
         return
     with open(os.path.join(rankings_folder,
@@ -1688,7 +1698,7 @@ def download_x_rankings(season=None):
                 Fore.BLUE + Style.BRIGHT + season_data[i]["top_rankings"][0]["name"] + Style.RESET_ALL,
                 Fore.YELLOW + Style.BRIGHT + str(season_data[i]["top_rankings"][0]["x_power"]) + Style.RESET_ALL,
                 Fore.GREEN + Style.BRIGHT + season_data[i]["top_rankings"][0]["weapon"]["name"] + Style.RESET_ALL))
-        except:
+        except KeyError:
             print("No data.")
 
     rankings = [[], [], [], []]
@@ -1735,9 +1745,9 @@ def download_x_rankings(season=None):
 
     print("Statistics files have been written in '{}'.".format(os.path.basename(rankings_folder)))
     if os.name == "nt":
-        subprocess.Popen("explorer /select," + os.path.join(
+        subprocess.Popen("explorer /select,{}".format(os.path.join(
             os.path.join(os.path.dirname(os.path.realpath(__file__)), rankings_folder),
-            "{} {} {} summary.csv".format(mode_time, url.split("/")[-3], url.split("/")[-2])))
+            "{} {} {} summary.csv".format(mode_time, url.split("/")[-3], url.split("/")[-2]))))
 
 
 def parse_league_stats(records):
@@ -1775,7 +1785,7 @@ def get_splatfest_events(festival_id):
     if str(festival_id) in FESTIVALS:
         festival_id = FESTIVALS[str(festival_id)]
     elif len(str(festival_id)) != 4 or str(festival_id) == "" or len(re.findall("[\D]", str(festival_id))) > 0:
-        print("Invalid Splatfest ID. Please check it and try again.")
+        print("\nInvalid Splatfest ID. Please check it and try again.")
         return
 
     url = URL_API_FEST_EVENTS.format(festival_id)
@@ -1795,8 +1805,8 @@ def get_splatfest_events(festival_id):
             if i["event_type"]["key"] == "100_x_match":
                 for j in i["members"]:
                     hundred.append(j["name"])
-    except:
-        print("Splatfest is not active.")
+    except KeyError:
+        print("\nSplatfest is not active.")
         return
 
     if friends:
