@@ -3,6 +3,20 @@
 I made this script last year to automate saving and parsing JSONs from SplatNet 2 because there's some pretty neat 
 information in there that isn't shown in the app.
 
+Here are some screenshots of what it can do:
+
+Preview Splatfest ink colors (`datagrabbercolor.py` only):
+![Splatfest ink colors with preview](https://i.imgur.com/26c0zoX.png)
+
+Order gear from the SplatNet shop:
+![Order gear from the SplatNet shop](https://i.imgur.com/2KSPemb.png)
+
+View your wins and losses for each mode on each stage:
+![View your wins and losses for each mode on each stage](https://i.imgur.com/1waRX6i.png)
+
+Check current and upcoming rotations
+![Check current and upcoming rotations](https://i.imgur.com/wLQv94D.png)
+
 ## Setup
 
 This script uses `requests` for making web requests, `colorama` for terminal text colors, and `python-dateutils` for 
