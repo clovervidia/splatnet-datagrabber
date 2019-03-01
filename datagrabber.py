@@ -1698,8 +1698,8 @@ def download_x_rankings(season=None):
                 Fore.BLUE + Style.BRIGHT + season_data[i]["top_rankings"][0]["name"] + Style.RESET_ALL,
                 Fore.YELLOW + Style.BRIGHT + str(season_data[i]["top_rankings"][0]["x_power"]) + Style.RESET_ALL,
                 Fore.GREEN + Style.BRIGHT + season_data[i]["top_rankings"][0]["weapon"]["name"] + Style.RESET_ALL))
-        except KeyError:
-            print("No data.")
+        except (IndexError, KeyError):
+            print("No data yet.")
 
     rankings = [[], [], [], []]
 
