@@ -1109,7 +1109,7 @@ def parse_splatfest_rankings_stats():
     print("The top 100 rankings for each Splatfest are in '{}'.".format("splatfest # #### rankings.json"))
     if os.name == "nt":
         subprocess.Popen("explorer /select,{}".format(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                                            stats_file_name)))
+                                                                   stats_file_name)))
 
 
 def parse_splatfest_results(festival_id=None):
@@ -1132,18 +1132,28 @@ def parse_splatfest_results(festival_id=None):
 
     alpha_name = results["festivals"][0]["names"]["alpha_short"]
     bravo_name = results["festivals"][0]["names"]["bravo_short"]
+    if results["results"][0]["festival_version"] == 1:
+        solo_key = "solo"
+        solo_string = "Solo %      {:<12}{:<12}"
+        team_key = "team"
+        team_string = "Team %      {:<12}{:<12}"
+    else:
+        solo_key = "regular"
+        solo_string = "Regular %   {:<12}{:<12}"
+        team_key = "challenge"
+        team_string = "Challenge % {:<12}{:<12}"
 
     alpha_votes = str(float(results["results"][0]["rates"]["vote"]["alpha"] / 100))
     alpha_votes += "0" if len(alpha_votes) < 5 else ""
-    alpha_solo = str(float(results["results"][0]["rates"]["challenge"]["alpha"] / 100))
+    alpha_solo = str(float(results["results"][0]["rates"][team_key]["alpha"] / 100))
     alpha_solo += "0" if len(alpha_solo) < 5 else ""
-    alpha_team = str(float(results["results"][0]["rates"]["regular"]["alpha"] / 100))
+    alpha_team = str(float(results["results"][0]["rates"][solo_key]["alpha"] / 100))
     alpha_team += "0" if len(alpha_team) < 5 else ""
     bravo_votes = str(float(results["results"][0]["rates"]["vote"]["bravo"] / 100))
     bravo_votes += "0" if len(bravo_votes) < 5 else ""
-    bravo_solo = str(float(results["results"][0]["rates"]["challenge"]["bravo"] / 100))
+    bravo_solo = str(float(results["results"][0]["rates"][team_key]["bravo"] / 100))
     bravo_solo += "0" if len(bravo_solo) < 5 else ""
-    bravo_team = str(float(results["results"][0]["rates"]["regular"]["bravo"] / 100))
+    bravo_team = str(float(results["results"][0]["rates"][solo_key]["bravo"] / 100))
     bravo_team += "0" if len(bravo_team) < 5 else ""
 
     if float(alpha_votes) > float(bravo_votes):
@@ -1172,16 +1182,16 @@ def parse_splatfest_results(festival_id=None):
                                                             Fore.GREEN + bravo_name + Style.RESET_ALL))
     print("            {:<12} {:<12}".format(alpha_name, bravo_name))
     print("Votes       {:<12}{:<12}".format(alpha_votes, bravo_votes))
-    print("Challenge % {:<12}{:<12}".format(alpha_solo, bravo_solo))
-    print("Regular %   {:<12}{:<12}".format(alpha_team, bravo_team))
+    print(solo_string.format(alpha_solo, bravo_solo))
+    print(team_string.format(alpha_team, bravo_team))
     print("-" * 30)
 
     alpha_total = alpha_total + 1 if results["results"][0]["summary"]["vote"] == 0 else alpha_total
     bravo_total = bravo_total + 1 if results["results"][0]["summary"]["vote"] == 1 else bravo_total
-    alpha_total = alpha_total + 1 if results["results"][0]["summary"]["challenge"] == 0 else alpha_total
-    bravo_total = bravo_total + 1 if results["results"][0]["summary"]["challenge"] == 1 else bravo_total
-    alpha_total = alpha_total + 1 if results["results"][0]["summary"]["regular"] == 0 else alpha_total
-    bravo_total = bravo_total + 1 if results["results"][0]["summary"]["regular"] == 1 else bravo_total
+    alpha_total = alpha_total + 1 if results["results"][0]["summary"][team_key] == 0 else alpha_total
+    bravo_total = bravo_total + 1 if results["results"][0]["summary"][team_key] == 1 else bravo_total
+    alpha_total = alpha_total + 1 if results["results"][0]["summary"][solo_key] == 0 else alpha_total
+    bravo_total = bravo_total + 1 if results["results"][0]["summary"][solo_key] == 1 else bravo_total
     print("            {:<12} {:<12}".format(alpha_total, bravo_total))
 
     winner = alpha_name if results["results"][0]["summary"]["total"] == 0 else bravo_name
@@ -1769,10 +1779,13 @@ def parse_league_stats(records):
         league_data["pair"]["gold_count"] + league_data["pair"]["silver_count"] + league_data["pair"]["bronze_count"] +
         league_data["pair"]["no_medal_count"]))
 
-    with open(max(glob.glob(os.path.join(JSON_FOLDER, "*records*")), key=os.path.getctime),
-              encoding="utf8") as latest_results_file:
-        latest_results = json.load(latest_results_file)
-        latest_medals = latest_results["records"]["league_stats"]
+    try:
+        with open(max(glob.glob(os.path.join(JSON_FOLDER, "*records*")), key=os.path.getctime),
+                  encoding="utf8") as latest_results_file:
+            latest_results = json.load(latest_results_file)
+            latest_medals = latest_results["records"]["league_stats"]
+    except ValueError:
+        return  # Couldn't find any matching JSONs, probably because none were downloaded yet
 
     for i in ["pair", "team"]:
         for j in ["no_medal_count", "bronze_count", "silver_count", "gold_count"]:

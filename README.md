@@ -54,9 +54,14 @@ There are 2 versions of the script: `datagrabber.py` and `datagrabbercolor.py`. 
 ink colors for Splatfest teams. The regular `datagrabber.py` also uses colors, but they are more basic to work on 
 terminals that don't support custom text colors.
 
-If you are using Windows, you'll have to use `datagrabber.py`. For 
-Linux and Mac, `datagrabbercolor.py` should work, but let me know if it doesn't. I've done my testing using Windows 10 
-running Ubuntu 14.04 through WSL, and it's worked for me so far.
+If you are using Windows 10, you can use `datagrabbercolor.py`. It uses ANSI escape sequences directly instead of going 
+through `colorama`. This enables all of the color features, like Splatfest ink colors, to work using the Windows 
+terminal. I only became aware of this recently, but Windows 10 supports ANSI escape sequences in the terminal without 
+any special setup.   
+If you are using Windows 8.1 or below, you'll have to use `datagrabber.py`, as ANSI escape sequences aren't 
+supported without using something like ANSICON. If you have that set up, colors might work, but I haven't tested it.  
+For Linux and Mac, `datagrabbercolor.py` should work, but let me know if it doesn't. I've done my testing using Windows 
+10 running Ubuntu 14.04 through WSL, and it's worked for me so far.
 
 Three menu options will copy text to the clipboard:
 * `c` or `cookie`: Copies your `iksm_session`

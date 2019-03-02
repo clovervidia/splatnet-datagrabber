@@ -9,7 +9,11 @@ import json
 import os
 import random
 import re
-import readline
+
+try:
+    import readline
+except ImportError:
+    pass
 import subprocess
 import sys
 import time
@@ -17,10 +21,10 @@ import urllib.request
 from directaccesshelp import help_reader
 
 import requests
-from colorama import init, Fore, Style
 from dateutil.relativedelta import relativedelta
 
-init(autoreset=True)
+# This prepares the Windows terminal to receive ANSI sequences somehow
+os.system("")
 
 try:
     with open("config.txt", "r", encoding="utf8") as config_file:
@@ -159,7 +163,7 @@ def menu():
         print("4 - Results of Latest Battle (Image + JSON)")
         print("5 - Results of Latest Battle (Monitor) (Image + JSON)")
         print("6 - Results of All Battles (Image + JSON)")
-        print(Fore.RED + Style.BRIGHT + "0 - Exit")
+        print("\x1b[31;1m{}\x1b[0m".format("0 - Exit"))
         option = input("\nclover@splatnet2:~$ ")
 
         if option == "1":
@@ -285,11 +289,12 @@ def get_battle_results(latest=False, battle_no=None, auto=False):
     url = URL_API_BATTLE_RESULTS.format(battle_no)
     battle = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
     battle_data = json.loads(battle.text)
-    print("{:<5} {:<23} {:<18} {:<15} {}{:<15}".format(battle_no, battle_data["stage"]["name"],
-                                                       battle_data["game_mode"]["name"], battle_data["rule"]["name"],
-                                                       Fore.GREEN if battle_data["my_team_result"][
-                                                                         "name"] == "VICTORY" else Fore.RED,
-                                                       battle_data["my_team_result"]["name"]))
+    print("{:<5} {:<23} {:<18} {:<15} {}\x1b[0m{:<15}".format(battle_no, battle_data["stage"]["name"],
+                                                              battle_data["game_mode"]["name"],
+                                                              battle_data["rule"]["name"],
+                                                              "\x1b[32m" if battle_data["my_team_result"][
+                                                                                "name"] == "VICTORY" else "\x1b[31m",
+                                                              battle_data["my_team_result"]["name"]))
     with open(os.path.join(JSON_FOLDER, os.path.join(BATTLES_FOLDER, "{} {}.json".format(battle_date, battle_no))), "w",
               encoding="utf8") as file:
         json.dump(battle_data, file, ensure_ascii=False)
@@ -527,11 +532,11 @@ def direct_access(option=None):
         url = URL_API_SCHEDULES
         response = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
         rotation = json.loads(response.text)
-        print(Fore.BLUE + Style.BRIGHT + "\nRight now:")
+        print("\x1b[34;1m{}\x1b[0m".format("\nRight now:"))
         parse_schedules(rotation, None)
-        print(Fore.BLUE + Style.BRIGHT + "Next:")
+        print("\x1b[34;1m{}\x1b[0m".format("\nNext:"))
         parse_schedules(rotation, None, 1)
-        print(Fore.BLUE + Style.BRIGHT + "Later:")
+        print("\x1b[34;1m{}\x1b[0m".format("\nLater:"))
         parse_schedules(rotation, None, 2)
     elif option in ["timeline"]:
         print("\nRetrieving your timeline.")
@@ -895,20 +900,20 @@ def parse_salmon_run_schedule(salmon_run):
                                                                                 datetime.datetime.fromtimestamp(
                                                                                     salmon_run["details"][i][
                                                                                         "start_time"])))
-        print("* You'll be heading to the {} for this one.".format(
-            Fore.GREEN + salmon_run["details"][i]["stage"]["name"] + Style.RESET_ALL))
+            print("* You'll be heading to the \x1b[32m{}\x1b[0m for this one.".format(
+                salmon_run["details"][i]["stage"]["name"]))
         print("* Your weapons will include: ", end="")
         weapons = []
         for j in salmon_run["details"][i]["weapons"]:
             if "coop_special_weapon" in j.keys():
                 if j["id"] == "-1":
-                    weapons.append(Fore.GREEN + Style.BRIGHT + "Random weapon" + Style.RESET_ALL)
+                    weapons.append("\x1b[32;1mRandom weapon\x1b[0m")
                 elif j["id"] == "-2":
-                    weapons.append(Fore.YELLOW + Style.BRIGHT + "Grizzco weapon" + Style.RESET_ALL)
+                    weapons.append("\x1b[33;1mGrizzco weapon\x1b[0m")
                 else:
-                    weapons.append(Fore.YELLOW + Style.BRIGHT + "Random weapon" + Style.RESET_ALL)
+                    weapons.append("\x1b[33;1mRandom weapon\x1b[0m")
             else:
-                weapons.append(Fore.CYAN + Style.BRIGHT + j["weapon"]["name"] + Style.RESET_ALL)
+                weapons.append("\x1b[36;1m{}\x1b[0m".format(j["weapon"]["name"]))
         print(", ".join(weapons))
 
 
@@ -1115,7 +1120,7 @@ def parse_splatfest_rankings_stats():
     print("The top 100 rankings for each Splatfest are in '{}'.".format("splatfest # #### rankings.json"))
     if os.name == "nt":
         subprocess.Popen("explorer /select,{}".format(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                                            stats_file_name)))
+                                                                   stats_file_name)))
 
 
 def parse_splatfest_results(festival_id=None):
@@ -1147,17 +1152,28 @@ def parse_splatfest_results(festival_id=None):
         round(float(results["festivals"][0]["colors"]["bravo"]["b"]) * 255),
         results["festivals"][0]["names"]["bravo_short"])
 
+    if results["results"][0]["festival_version"] == 1:
+        solo_key = "solo"
+        solo_string = "Solo %      {:<12}{:<12}"
+        team_key = "team"
+        team_string = "Team %      {:<12}{:<12}"
+    else:
+        solo_key = "regular"
+        solo_string = "Regular %   {:<12}{:<12}"
+        team_key = "challenge"
+        team_string = "Challenge % {:<12}{:<12}"
+
     alpha_votes = str(float(results["results"][0]["rates"]["vote"]["alpha"] / 100))
     alpha_votes += "0" if len(alpha_votes) < 5 else ""
-    alpha_solo = str(float(results["results"][0]["rates"]["challenge"]["alpha"] / 100))
+    alpha_solo = str(float(results["results"][0]["rates"][team_key]["alpha"] / 100))
     alpha_solo += "0" if len(alpha_solo) < 5 else ""
-    alpha_team = str(float(results["results"][0]["rates"]["regular"]["alpha"] / 100))
+    alpha_team = str(float(results["results"][0]["rates"][solo_key]["alpha"] / 100))
     alpha_team += "0" if len(alpha_team) < 5 else ""
     bravo_votes = str(float(results["results"][0]["rates"]["vote"]["bravo"] / 100))
     bravo_votes += "0" if len(bravo_votes) < 5 else ""
-    bravo_solo = str(float(results["results"][0]["rates"]["challenge"]["bravo"] / 100))
+    bravo_solo = str(float(results["results"][0]["rates"][team_key]["bravo"] / 100))
     bravo_solo += "0" if len(bravo_solo) < 5 else ""
-    bravo_team = str(float(results["results"][0]["rates"]["regular"]["bravo"] / 100))
+    bravo_team = str(float(results["results"][0]["rates"][solo_key]["bravo"] / 100))
     bravo_team += "0" if len(bravo_team) < 5 else ""
 
     if float(alpha_votes) > float(bravo_votes):
@@ -1185,16 +1201,16 @@ def parse_splatfest_results(festival_id=None):
                                                             bravo_name))
     print("            {:<35} {:<12}".format(alpha_name, bravo_name))
     print("Votes       {:<12}{:<12}".format(alpha_votes, bravo_votes))
-    print("Challenge % {:<12}{:<12}".format(alpha_solo, bravo_solo))
-    print("Regular %   {:<12}{:<12}".format(alpha_team, bravo_team))
+    print(solo_string.format(alpha_solo, bravo_solo))
+    print(team_string.format(alpha_team, bravo_team))
     print("-" * 30)
 
     alpha_total = alpha_total + 1 if results["results"][0]["summary"]["vote"] == 0 else alpha_total
     bravo_total = bravo_total + 1 if results["results"][0]["summary"]["vote"] == 1 else bravo_total
-    alpha_total = alpha_total + 1 if results["results"][0]["summary"]["challenge"] == 0 else alpha_total
-    bravo_total = bravo_total + 1 if results["results"][0]["summary"]["challenge"] == 1 else bravo_total
-    alpha_total = alpha_total + 1 if results["results"][0]["summary"]["regular"] == 0 else alpha_total
-    bravo_total = bravo_total + 1 if results["results"][0]["summary"]["regular"] == 1 else bravo_total
+    alpha_total = alpha_total + 1 if results["results"][0]["summary"][team_key] == 0 else alpha_total
+    bravo_total = bravo_total + 1 if results["results"][0]["summary"][team_key] == 1 else bravo_total
+    alpha_total = alpha_total + 1 if results["results"][0]["summary"][solo_key] == 0 else alpha_total
+    bravo_total = bravo_total + 1 if results["results"][0]["summary"][solo_key] == 1 else bravo_total
     print("            {:<12} {:<12}".format(alpha_total, bravo_total))
 
     winner = alpha_name if results["results"][0]["summary"]["total"] == 0 else bravo_name
@@ -1202,7 +1218,7 @@ def parse_splatfest_results(festival_id=None):
     print("This Splatfest's winner was {}Team {}.".format(winner_color, winner))
 
     if alpha_total == 3 or bravo_total == 3:
-        print(Style.BRIGHT + "And it was a sweep!")
+        print("\x1b[1m{}\x1b[0m".format("And it was a sweep!"))
 
 
 def parse_schedules(schedule, splatfest_active, rotation=0):
@@ -1214,36 +1230,28 @@ def parse_schedules(schedule, splatfest_active, rotation=0):
               "League Battle": "\x1b[38;2;240;045;125mLeague Battle\x1b[0m"}
 
     if rotation == 0:
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["regular"][0]["game_mode"]["name"]),
-                                             schedule["regular"][0]["rule"]["name"],
-                                             Fore.GREEN + schedule["regular"][0]["stage_a"]["name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["regular"][0]["stage_b"]["name"]))
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["gachi"][0]["game_mode"]["name"]),
-                                             schedule["gachi"][0]["rule"]["name"],
-                                             Fore.GREEN + schedule["gachi"][0]["stage_a"]["name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["gachi"][0]["stage_b"]["name"]))
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["league"][0]["game_mode"]["name"]),
-                                             schedule["league"][0]["rule"]["name"],
-                                             Fore.GREEN + schedule["league"][0]["stage_a"]["name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["league"][0]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["regular"][0]["game_mode"]["name"]), schedule["regular"][0]["rule"]["name"],
+            schedule["regular"][0]["stage_a"]["name"], schedule["regular"][0]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["gachi"][0]["game_mode"]["name"]), schedule["gachi"][0]["rule"]["name"],
+            schedule["gachi"][0]["stage_a"]["name"], schedule["gachi"][0]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["league"][0]["game_mode"]["name"]), schedule["league"][0]["rule"]["name"],
+            schedule["league"][0]["stage_a"]["name"], schedule["league"][0]["stage_b"]["name"]))
         time_left = datetime.datetime.fromtimestamp(schedule["regular"][0]["end_time"]) - datetime.datetime.now()
         print("There's {} left in this rotation.".format(str(time_left).split(".")[0]))
     else:
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["regular"][rotation]["game_mode"]["name"]),
-                                             schedule["regular"][rotation]["rule"]["name"],
-                                             Fore.GREEN + schedule["regular"][rotation]["stage_a"][
-                                                 "name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["regular"][rotation]["stage_b"]["name"]))
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["gachi"][rotation]["game_mode"]["name"]),
-                                             schedule["gachi"][rotation]["rule"]["name"],
-                                             Fore.GREEN + schedule["gachi"][rotation]["stage_a"][
-                                                 "name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["gachi"][rotation]["stage_b"]["name"]))
-        print("{:<41}{:<17}{} and {}".format(colors.get(schedule["league"][rotation]["game_mode"]["name"]),
-                                             schedule["league"][rotation]["rule"]["name"],
-                                             Fore.GREEN + schedule["league"][rotation]["stage_a"][
-                                                 "name"] + Style.RESET_ALL,
-                                             Fore.GREEN + schedule["league"][rotation]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["regular"][rotation]["game_mode"]["name"]),
+            schedule["regular"][rotation]["rule"]["name"], schedule["regular"][rotation]["stage_a"]["name"],
+            schedule["regular"][rotation]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["gachi"][rotation]["game_mode"]["name"]), schedule["gachi"][rotation]["rule"]["name"],
+            schedule["gachi"][rotation]["stage_a"]["name"], schedule["gachi"][rotation]["stage_b"]["name"]))
+        print("{:<41}{:<17}\x1b[32m{}\x1b[0m and \x1b[32m{}\x1b[0m".format(
+            colors.get(schedule["league"][rotation]["game_mode"]["name"]), schedule["league"][rotation]["rule"]["name"],
+            schedule["league"][rotation]["stage_a"]["name"], schedule["league"][rotation]["stage_b"]["name"]))
         time_till_start = datetime.datetime.fromtimestamp(
             schedule["regular"][rotation]["start_time"]) - datetime.datetime.now()
         print("There's {} until this rotation. It starts at {}.".format(str(time_till_start).split(".")[0],
@@ -1320,12 +1328,12 @@ def parse_splatfest_colors(colors):
         neutral_block = neutral_color.format("█" * 30)
 
         if len(colors["festivals"]) > 1:
-            print("\nSplatfest #{} [{}] ({} vs {})".format(len(colors["festivals"]) - i, Fore.BLUE + Style.BRIGHT + str(
-                colors["festivals"][i]["festival_id"]) + Style.RESET_ALL, alpha_named_color, bravo_named_color))
+            print("\nSplatfest #{} [\x1b[34;1m{}\x1b[0m] ({} vs {})".format(len(colors["festivals"]) - i,
+                                                                            colors["festivals"][i]["festival_id"],
+                                                                            alpha_named_color, bravo_named_color))
         else:
-            print("\nLatest Splatfest [{}] ({} vs {})".format(
-                Fore.BLUE + Style.BRIGHT + str(colors["festivals"][i]["festival_id"]) + Style.RESET_ALL,
-                alpha_named_color, bravo_named_color))
+            print("\nLatest Splatfest [\x1b[34;1m{}\x1b[0m] ({} vs {})".format(colors["festivals"][i]["festival_id"],
+                                                                               alpha_named_color, bravo_named_color))
 
         for j in [("alpha", alpha_named_color, alpha_block), ("bravo", bravo_named_color, bravo_block),
                   ("middle", neutral_named_color, neutral_block)]:
@@ -1366,12 +1374,11 @@ def parse_splatnet_shop(items):
     for idx, i in enumerate(items["merchandises"], start=1):
         if idx != 1:
             print("-" * 30)
-        print("[{}] {} by {} ({})".format(Fore.YELLOW + Style.BRIGHT + str(idx) + Style.RESET_ALL, i["gear"]["name"],
-                                          i["gear"]["brand"]["name"], i["gear"]["kind"]))
-        print("{} with {} slot{}. ({}).".format(i["skill"]["name"],
-                                                Fore.GREEN + str(i["gear"]["rarity"] + 1) + Style.RESET_ALL,
-                                                "s" if i["gear"]["rarity"] + 1 > 1 else "",
-                                                i["gear"]["brand"]["frequent_skill"]["name"]))
+        print("[\x1b[33;1m{}\x1b[0m] {} by {} ({})".format(idx, i["gear"]["name"], i["gear"]["brand"]["name"],
+                                                           i["gear"]["kind"]))
+        print("{} with \x1b[32m{}\x1b[0m slot{}. ({}).".format(i["skill"]["name"], i["gear"]["rarity"] + 1,
+                                                               "s" if i["gear"]["rarity"] + 1 > 1 else "",
+                                                               i["gear"]["brand"]["frequent_skill"]["name"]))
         print("{} coins. {} left.".format(i["price"], str(
             datetime.datetime.fromtimestamp(i["end_time"]) - datetime.datetime.now()).split(".")[0]))
 
@@ -1433,7 +1440,7 @@ def parse_timeline(timeline):
                     print("{}".format("-" * 30))
                 print(i["weapon"]["name"])
                 print("Sub: {}, Special: {}".format(i["weapon"]["sub"]["name"], i["weapon"]["special"]["name"]))
-                print("Weapon ID #{}".format(str(i["weapon"]["id"])))
+                print("Weapon ID #{}".format(i["weapon"]["id"]))
                 print("Officially released {}".format(str(datetime.datetime.fromtimestamp(i["release_time"]))))
                 filename = os.path.join(os.path.join(WEAPON_IMAGES_FOLDER, "main"),
                                         "{} - {} - {}".format(i["weapon"]["id"], i["weapon"]["name"],
@@ -1444,8 +1451,8 @@ def parse_timeline(timeline):
         print("Encountered exception when parsing timeline:\n{}\n".format(e))
     try:
         if timeline["udemae"]["importance"] > -1:
-            print("\nCongratulations on your new rank in {}!".format(
-                Fore.YELLOW + Style.BRIGHT + timeline["udemae"]["stat"]["rule"]["name"] + Style.RESET_ALL))
+            print("\nCongratulations on your new rank in \x1b[33;1m{}\x1b[0m!".format(
+                timeline["udemae"]["stat"]["rule"]["name"]))
             print("You went from {}{} to {}{}!".format(
                 timeline["udemae"]["stat"]["player_result"]["player"]["udemae"]["name"],
                 timeline["udemae"]["stat"]["player_result"]["player"]["udemae"]["s_plus_number"] if
@@ -1567,8 +1574,7 @@ def parse_records_stages(records, stage=None):
 
 
 def print_record_stage(stage_stats):
-    print("{} (#{})".format(Fore.BLUE + Style.BRIGHT + stage_stats["stage"]["name"] + Style.RESET_ALL,
-                            stage_stats["stage"]["id"]))
+    print("\x1b[34;1m{}\x1b[0m (#{})".format(stage_stats["stage"]["name"], stage_stats["stage"]["id"]))
     print("SZ Wins: {:<4} Losses: {:<4}".format(stage_stats["area_win"], stage_stats["area_lose"]))
     print("TC Wins: {:<4} Losses: {:<4}".format(stage_stats["yagura_win"], stage_stats["yagura_lose"]))
     print("RM Wins: {:<4} Losses: {:<4}".format(stage_stats["hoko_win"], stage_stats["hoko_lose"]))
@@ -1677,8 +1683,7 @@ def parse_records_weapons(records, weapon=None):
 
 
 def print_record_weapon(weapon_record):
-    print("{} (#{})".format(Fore.BLUE + Style.BRIGHT + weapon_record["weapon"]["name"] + Style.RESET_ALL,
-                            weapon_record["weapon"]["id"]))
+    print("\x1b[34;1m{}\x1b[0m (#{})".format(weapon_record["weapon"]["name"], weapon_record["weapon"]["id"]))
     print("{}/{}".format(weapon_record["weapon"]["sub"]["name"], weapon_record["weapon"]["special"]["name"]))
     print("Wins: {:<8} Losses: {:<5}".format(weapon_record["win_count"], weapon_record["lose_count"]))
     print("Freshness: {:<6} Max: {:<6}".format(weapon_record["win_meter"], weapon_record["max_win_meter"]))
@@ -1731,10 +1736,9 @@ def download_x_rankings(season=None):
     for i in ["splat_zones", "tower_control", "rainmaker", "clam_blitz"]:
         try:
             print("{}".format(season_data[i]["rule"]["name"]))
-            print("#1 - {} @ {} with the {} ".format(
-                Fore.BLUE + Style.BRIGHT + season_data[i]["top_rankings"][0]["name"] + Style.RESET_ALL,
-                Fore.YELLOW + Style.BRIGHT + str(season_data[i]["top_rankings"][0]["x_power"]) + Style.RESET_ALL,
-                Fore.GREEN + Style.BRIGHT + season_data[i]["top_rankings"][0]["weapon"]["name"] + Style.RESET_ALL))
+            print("#1 - \x1b[34;1m{}\x1b[0m @ \x1b[33;1m{}\x1b[0m with the \x1b[32;1m{}\x1b[0m ".format(
+                season_data[i]["top_rankings"][0]["name"], str(season_data[i]["top_rankings"][0]["x_power"]),
+                season_data[i]["top_rankings"][0]["weapon"]["name"]))
         except (IndexError, KeyError):
             print("No data yet.")
 
@@ -1815,10 +1819,13 @@ def parse_league_stats(records):
         league_data["pair"]["gold_count"] + league_data["pair"]["silver_count"] + league_data["pair"]["bronze_count"] +
         league_data["pair"]["no_medal_count"]))
 
-    with open(max(glob.glob(os.path.join(JSON_FOLDER, "*records*")), key=os.path.getctime),
-              encoding="utf8") as latest_results_file:
-        latest_results = json.load(latest_results_file)
-        latest_medals = latest_results["records"]["league_stats"]
+    try:
+        with open(max(glob.glob(os.path.join(JSON_FOLDER, "*records*")), key=os.path.getctime),
+                  encoding="utf8") as latest_results_file:
+            latest_results = json.load(latest_results_file)
+            latest_medals = latest_results["records"]["league_stats"]
+    except ValueError:
+        return  # Couldn't find any matching JSONs, probably because none were downloaded yet
 
     for i in ["pair", "team"]:
         for j in ["no_medal_count", "bronze_count", "silver_count", "gold_count"]:
