@@ -1246,7 +1246,7 @@ def parse_schedules(schedule, splatfest_active, rotation=0):
 
 def parse_gear_images(data):
     if "coop" in data:
-        download_gear_image(data["coop"]["reward_gear"]["gear"]["image"])
+        download_gear_image(data["coop"]["reward_gear"]["gear"])
 
     if "merchandises" in data:
         for i in range(len(data["merchandises"])):

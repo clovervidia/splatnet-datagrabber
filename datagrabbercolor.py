@@ -289,7 +289,7 @@ def get_battle_results(latest=False, battle_no=None, auto=False):
     url = URL_API_BATTLE_RESULTS.format(battle_no)
     battle = requests.get(url, headers=app_head_results, cookies=dict(iksm_session=COOKIE))
     battle_data = json.loads(battle.text)
-    print("{:<5} {:<23} {:<18} {:<15} {}\x1b[0m{:<15}".format(battle_no, battle_data["stage"]["name"],
+    print("{:<5} {:<23} {:<18} {:<15} {}{:<15}\x1b[0m".format(battle_no, battle_data["stage"]["name"],
                                                               battle_data["game_mode"]["name"],
                                                               battle_data["rule"]["name"],
                                                               "\x1b[32m" if battle_data["my_team_result"][
@@ -1262,7 +1262,7 @@ def parse_schedules(schedule, splatfest_active, rotation=0):
 
 def parse_gear_images(data):
     if "coop" in data:
-        download_gear_image(data["coop"]["reward_gear"]["gear"]["image"])
+        download_gear_image(data["coop"]["reward_gear"]["gear"])
 
     if "merchandises" in data:
         for i in range(len(data["merchandises"])):
